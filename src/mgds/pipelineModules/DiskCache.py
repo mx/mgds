@@ -3,6 +3,7 @@ import hashlib
 import json
 import math
 import os
+import pickle
 from typing import Any, Callable
 
 import torch
@@ -190,7 +191,8 @@ class DiskCache(
                             for name in self.aggregate_names:
                                 aggregate_item[name] = self._get_previous_item(in_variation, name, in_index)
 
-                            torch.save(split_item, os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')))
+                            with open(os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')), 'wb') as f:
+                                pickle.dump(split_item, f, pickle.HIGHEST_PROTOCOL)
                             aggregate_cache[group_index] = aggregate_item
 
                         fs = (self._state.executor.submit(
