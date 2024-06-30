@@ -191,16 +191,17 @@ class DiskCache(
                             for name in self.aggregate_names:
                                 aggregate_item[name] = self._get_previous_item(in_variation, name, in_index)
 
-                            with open(os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')), 'wb') as f:
-                                pickle.dump(split_item, f, pickle.HIGHEST_PROTOCOL)
+                            #torch.save(split_item, os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')))
                             aggregate_cache[group_index] = aggregate_item
+                            return group_index, split_item
 
                         fs = (self._state.executor.submit(
                             fn, group_index, in_index, in_variation)
                               for (group_index, in_index)
                               in enumerate(self.group_indices[group_key]))
                         for i, f in enumerate(concurrent.futures.as_completed(fs)):
-                            f.result()
+                            index, item = f.result()
+                            torch.save(item, os.path.realpath(os.path.join(cache_dir, str(index) + '.pt')))
                             if i % 100 == 0:
                                 self._torch_gc()
                             bar.update(1)
