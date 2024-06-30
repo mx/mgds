@@ -194,18 +194,26 @@ class DiskCache(
                             #torch.save(split_item, os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')))
                             aggregate_cache[group_index] = aggregate_item
                             return group_index, split_item
+                        def save_item(group_index, item):
+                            torch.save(item, os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')))
 
                         fs = (self._state.executor.submit(
                             fn, group_index, in_index, in_variation)
                               for (group_index, in_index)
                               in enumerate(self.group_indices[group_key]))
+                        batch = []
                         for i, f in enumerate(concurrent.futures.as_completed(fs)):
-                            index, item = f.result()
-                            torch.save(item, os.path.realpath(os.path.join(cache_dir, str(index) + '.pt')))
+                            batch.append(f.result())
                             if i % 100 == 0:
+                                for x, y in batch:
+                                    save_item(x, y)
+                                batch = []
                                 self._torch_gc()
                             bar.update(1)
 
+                    for x, y in batch:
+                        save_item(x, y)
+                    batch = []
                     torch.save(aggregate_cache, os.path.realpath(os.path.join(cache_dir, 'aggregate.pt')))
 
                 if self.aggregate_cache[group_key][in_variation] is None:
