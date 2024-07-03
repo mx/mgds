@@ -3,6 +3,7 @@ import hashlib
 import json
 import math
 import os
+import pickle
 from typing import Any, Callable
 
 import torch
@@ -10,6 +11,12 @@ from tqdm import tqdm
 
 from mgds.PipelineModule import PipelineModule
 from mgds.pipelineModuleTypes.SingleVariationRandomAccessPipelineModule import SingleVariationRandomAccessPipelineModule
+
+
+def to_numpy(state: dict):
+    for k in state:
+        if isinstance(state[k], torch.Tensor):
+            state[k] = state[k].detach().cpu().numpy()
 
 
 class DiskCache(
@@ -190,7 +197,10 @@ class DiskCache(
                             for name in self.aggregate_names:
                                 aggregate_item[name] = self._get_previous_item(in_variation, name, in_index)
 
-                            torch.save(split_item, os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pt')))
+                            to_numpy(split_item)
+                            path = os.path.realpath(os.path.join(cache_dir, str(group_index) + '.pkl'))
+                            with open(path, 'wb') as f:
+                                pickle.dump(split_item, f, pickle.HIGHEST_PROTOCOL)
                             aggregate_cache[group_index] = aggregate_item
 
                         fs = (self._state.executor.submit(
